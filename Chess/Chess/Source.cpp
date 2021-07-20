@@ -150,6 +150,42 @@ public:
     }
 };
 
+class pawnBlackMovement : public movementStrat {
+public:
+    virtual void move(chessPieces* pawn) {
+        bool fMove = pawn->getFirstMove();
+        int positionX = pawn->getPositionX();
+        int positionY = pawn->getPositionY();
+
+        if (positionY != 7 && positionX != 0 && board[positionY + 1][positionX - 1] != 0) {
+            pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX - 1});
+        }
+        if (positionY != 7 && positionX != 7 && board[positionY + 1][positionX + 1] != 0) {
+            pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX + 1});
+        }
+
+        if (board[positionY + 1][positionX] != 0 || positionY == 7) {
+            return;
+        }
+        else if (!fMove) {//No piece in front, but you haven't made your first move yet
+            if (board[positionY + 2][positionX] != 0) {
+                pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX});
+            }
+            else {//If there isnt as piece two moves ahead, then both spaces are free
+                pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX});
+                pawn->pushAvailSpaces(vector<int> {positionY + 2, positionX});
+            }
+        }
+        else {//There isnt a piece in front, but you also made your first move already
+            pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX});
+        }
+    }
+    ~pawnBlackMovement() {
+
+    }
+};
+
+
 class rookMovement : public movementStrat {
 public:
     virtual void move(chessPieces* rook) {
@@ -268,149 +304,356 @@ public:
     }
 };
 
-class pawnBlackMovement : public movementStrat {
+class bishopMovement : public movementStrat {
 public:
-    virtual void move(chessPieces* pawn) {
-        bool fMove = pawn->getFirstMove();
-        int positionX = pawn->getPositionX();
-        int positionY = pawn->getPositionY();
+    virtual void move(chessPieces* bishop) {
+        bool fMove = bishop->getFirstMove();
+        int positionX = bishop->getPositionX();
+        int positionY = bishop->getPositionY();
 
-        if (positionY != 7 && positionX != 0 && board[positionY + 1][positionX - 1] != 0) {
-            pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX - 1});
+        int left = positionX;//Look for left values
+        
+        int top = positionY;
+        
+        while (left - 1 >= 0 && top - 1 >= 0 && board[top-1][left - 1] == 0) {//Top Left
+            --left;
+            --top;
+            bishop->pushAvailSpaces(vector<int> {top, left});
         }
-        if (positionY != 7 && positionX != 7 && board[positionY + 1][positionX + 1] != 0) {
-            pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX + 1});
+        if (left != 0 && top != 0 && board[top-1][left - 1] != 0) {
+            --left;
+            --top;
+            bishop->pushAvailSpaces(vector<int> {top, left});
         }
 
-        if (board[positionY + 1][positionX] != 0 || positionY == 7) {
-            return;
+        left = positionX;
+        int bot = positionY;
+        while (left - 1 >= 0 && bot + 1 <= 7 && board[bot + 1][left - 1] == 0) {//Bottom Left
+            --left;
+            ++bot;
+            bishop->pushAvailSpaces(vector<int> {bot, left});
         }
-        else if (!fMove) {//No piece in front, but you haven't made your first move yet
-            if (board[positionY + 2][positionX] != 0) {
-                pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX});
-            }
-            else {//If there isnt as piece two moves ahead, then both spaces are free
-                pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX});
-                pawn->pushAvailSpaces(vector<int> {positionY + 2, positionX});
-            }
+        if (left != 0 && bot != 7 && board[bot + 1][left - 1] != 0) {
+            --left;
+            ++bot;
+            bishop->pushAvailSpaces(vector<int> {bot, left});
         }
-        else {//There isnt a piece in front, but you also made your first move already
-            pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX});
+
+        int right = positionX;//Look for right values
+        top = positionY;
+
+        while (right + 1 <= 7 && top - 1 >= 0 && board[top - 1][right + 1] == 0) {//Top Right
+            ++right;
+            --top;
+            bishop->pushAvailSpaces(vector<int> {top, right});
+        }
+        if (right != 7 && top != 0 && board[top - 1][right + 1] != 0) {
+            ++right;
+            --top;
+            bishop->pushAvailSpaces(vector<int> {top, right});
+        }
+
+        right = positionX;
+        bot = positionY;
+
+        while (right + 1 <= 7 && bot + 1 <= 7 && board[bot + 1][right + 1] == 0) {//Top Right
+            ++right;
+            ++bot;
+            bishop->pushAvailSpaces(vector<int> {bot, right});
+        }
+        if (right != 7 && bot != 7 && board[bot + 1][right + 1] != 0) {
+            ++right;
+            ++bot;
+            bishop->pushAvailSpaces(vector<int> {bot, right});
+        }
+
+    }
+    ~bishopMovement() {
+
+    }
+};
+
+class queenMovement : public movementStrat {
+public:
+    virtual void move(chessPieces* queen) {
+        bool fMove = queen->getFirstMove();
+        int positionX = queen->getPositionX();
+        int positionY = queen->getPositionY();
+
+        int color = queen->getColor();
+
+        int left = positionX;//Look for left values
+
+        int top = positionY;
+
+        while (left - 1 >= 0 && top - 1 >= 0 && board[top - 1][left - 1] != color) {//Top Left
+            cout << "ooga booga" << endl;
+            --left;
+            --top;
+            queen->pushAvailSpaces(vector<int> {top, left});
+        }
+        if (left != 0 && top != 0 && board[top - 1][left - 1] != color) {
+            --left;
+            --top;
+            queen->pushAvailSpaces(vector<int> {top, left});
+        }
+
+        left = positionX;
+        int bot = positionY;
+        while (left - 1 >= 0 && bot + 1 <= 7 && board[bot + 1][left - 1] != color) {//Bottom Left
+            --left;
+            ++bot;
+            queen->pushAvailSpaces(vector<int> {bot, left});
+        }
+        if (left != 0 && bot != 7 && board[bot + 1][left - 1] != color) {
+            --left;
+            ++bot;
+            queen->pushAvailSpaces(vector<int> {bot, left});
+        }
+
+        int right = positionX;//Look for right values
+        top = positionY;
+
+        while (right + 1 <= 7 && top - 1 >= 0 && board[top - 1][right + 1] != color) {//Top Right
+            ++right;
+            --top;
+            queen->pushAvailSpaces(vector<int> {top, right});
+        }
+        if (right != 7 && top != 0 && board[top - 1][right + 1] != color) {
+            ++right;
+            --top;
+            queen->pushAvailSpaces(vector<int> {top, right});
+        }
+
+        right = positionX;
+        bot = positionY;
+
+        while (right + 1 <= 7 && bot + 1 <= 7 && board[bot + 1][right + 1] != color) {//Top Right
+            ++right;
+            ++bot;
+            queen->pushAvailSpaces(vector<int> {bot, right});
+        }
+        if (right != 7 && bot != 7 && board[bot + 1][right + 1] != color) {
+            ++right;
+            ++bot;
+            queen->pushAvailSpaces(vector<int> {bot, right});
+        }
+        //=========================================================================================================================
+        left = positionX;//Look for left values
+        right = positionX;//Look for right values
+
+        while (left - 1 >= 0 && board[positionY][left - 1] != color) {
+            --left;
+        }
+        if (left != 0 && board[positionY][left - 1] != color) {
+            --left;
+        }
+        while (right + 1 <= 7 && board[positionY][right + 1] != color) {
+            ++right;
+        }
+        if (right != 7 && board[positionY][right + 1] != color) {
+            ++right;
+        }
+        //cout << "left: " << left << endl;
+        //cout << "right: " << right << endl;
+
+        for (int i = left; i <= right; i++) {
+            if (i == positionX) {
+                continue;
+            }
+            queen->pushAvailSpaces(vector<int> {positionY, i});
+        }
+
+        top = positionY;
+        bot = positionY;
+
+
+        while (top - 1 >= 0 && board[top - 1][positionX] != color) {
+            --top;
+
+        }
+        if (top != 0 && board[top - 1][positionX] != color) {
+            --top;
+        }
+        while (bot + 1 <= 7 && board[bot + 1][positionX] == color) {
+            ++bot;
+
+        }
+        if (bot != 7 && board[bot + 1][positionX] != color) {
+            ++bot;
+        }
+
+        //cout << "top: " << top << endl;
+        //cout << "bot: " << bot << endl;
+        for (int i = top; i <= bot; i++) {
+            if (i == positionY) {
+                continue;
+            }
+            queen->pushAvailSpaces(vector<int> {i, positionX});
         }
     }
-    ~pawnBlackMovement() {
+    ~queenMovement() {
+
+    }
+};
+
+class kingMovement : public movementStrat {
+public:
+    virtual void move(chessPieces* king) {
+        bool fMove = king->getFirstMove();
+        int positionX = king->getPositionX();
+        int positionY = king->getPositionY();
+
+        int color = king->getColor();
+
+
+        int top = positionY; 
+        int point = positionX-1;
+        for (int i = 0; i < 3; i++) { //Top 3
+            if (top - 1 == -1) {
+                break;
+            }
+            if (point >= 0 && point <= 7 && board[top - 1][point] != king->getColor()) {
+                king->pushAvailSpaces(vector<int> {top - 1, point});
+            }
+            ++point;
+        }
+
+        int bot = positionY; 
+        point = positionX-1;
+        for (int i = 0; i < 3; i++) { //Bottom 3
+            if (bot + 1 == 8) {
+                break;
+            }
+            if (point >= 0 && point <= 7 && board[bot + 1][point] != king->getColor()) {
+                king->pushAvailSpaces(vector<int> {bot + 1, point});
+            }
+            ++point;
+        }
+
+        
+        if (positionX - 1 >= 0 && board[positionY][positionX - 1] != king->getColor()) { //Left
+            king->pushAvailSpaces(vector<int> {positionY, positionX - 1});
+        }
+        if (positionX + 1 <= 7 && board[positionY][positionX + 1] != king->getColor()) { //Right
+            king->pushAvailSpaces(vector<int> {positionY, positionX + 1});
+        }
+
+    }
+    ~kingMovement() {
 
     }
 };
 
 
 
-
-
-chessPieces bSpritePawn1(0, 1, 1);
+chessPieces bSpritePawn1(0, 1, 2);
 sf::Texture bTextPawn1;
 
-chessPieces bSpritePawn2(1, 1, 1);
+chessPieces bSpritePawn2(1, 1, 2);
 sf::Texture bTextPawn2;
 
-chessPieces bSpritePawn3(2, 1, 1);
+chessPieces bSpritePawn3(2, 1, 2);
 sf::Texture bTextPawn3;
 
-chessPieces bSpritePawn4(3, 1, 1);
+chessPieces bSpritePawn4(3, 1, 2);
 sf::Texture bTextPawn4;
 
-chessPieces bSpritePawn5(4, 1, 1);
+chessPieces bSpritePawn5(4, 1, 2);
 sf::Texture bTextPawn5;
 
-chessPieces bSpritePawn6(5, 1, 1);
+chessPieces bSpritePawn6(5, 1, 2);
 sf::Texture bTextPawn6;
 
-chessPieces bSpritePawn7(6, 1, 1);
+chessPieces bSpritePawn7(6, 1, 2);
 sf::Texture bTextPawn7;
 
-chessPieces bSpritePawn8(7, 1, 1);
+chessPieces bSpritePawn8(7, 1, 2);
 sf::Texture bTextPawn8;
 
-chessPieces bSpriteRook1(0, 0, 1);
+chessPieces bSpriteRook1(0, 0, 2);
 sf::Texture bTextRook1;
 
-chessPieces bSpriteRook2(7, 0, 1);
+chessPieces bSpriteRook2(7, 0, 2);
 sf::Texture bTextRook2;
 
-chessPieces bSpriteKnight1(1, 0, 1);
+chessPieces bSpriteKnight1(1, 0, 2);
 sf::Texture bTextKnight1;
 
-chessPieces bSpriteKnight2(6, 0, 1);
+chessPieces bSpriteKnight2(6, 0, 2);
 sf::Texture bTextKnight2;
 
-chessPieces bSpriteBishop1(2, 0, 1);
+chessPieces bSpriteBishop1(2, 0, 2);
 sf::Texture bTextBishop1;
 
-chessPieces bSpriteBishop2(5, 0, 1);
+chessPieces bSpriteBishop2(5, 0, 2);
 sf::Texture bTextBishop2;
 
-chessPieces bSpriteQueen(4, 0, 1);
+chessPieces bSpriteQueen(4, 0, 2);
 sf::Texture bTextQueen;
 
-chessPieces bSpriteKing(3, 0, 1);
+chessPieces bSpriteKing(3, 0, 2);
 sf::Texture bTextKing;
 
-chessPieces wSpritePawn1(0 , 6, 0);
+chessPieces wSpritePawn1(0 , 6, 1);
 sf::Texture wTextPawn1;
 
-chessPieces wSpritePawn2(1, 6, 0);
+chessPieces wSpritePawn2(1, 6, 1);
 sf::Texture wTextPawn2;
 
-chessPieces wSpritePawn3(2, 6, 0);
+chessPieces wSpritePawn3(2, 6, 1);
 sf::Texture wTextPawn3;
 
-chessPieces wSpritePawn4(3, 6, 0);
+chessPieces wSpritePawn4(3, 6, 1);
 sf::Texture wTextPawn4;
 
-chessPieces wSpritePawn5(4, 6, 0);
+chessPieces wSpritePawn5(4, 6, 1);
 sf::Texture wTextPawn5;
 
-chessPieces wSpritePawn6(5, 6, 0);
+chessPieces wSpritePawn6(5, 6, 1);
 sf::Texture wTextPawn6;
 
-chessPieces wSpritePawn7(6, 6, 0);
+chessPieces wSpritePawn7(6, 6, 1);
 sf::Texture wTextPawn7;
 
-chessPieces wSpritePawn8(7, 6, 0);
+chessPieces wSpritePawn8(7, 6, 1);
 sf::Texture wTextPawn8;
 
-chessPieces wSpriteRook1(0, 7, 0);
+chessPieces wSpriteRook1(0, 7, 1);
 sf::Texture wTextRook1;
 
-chessPieces wSpriteRook2(7, 7, 0);
+chessPieces wSpriteRook2(7, 7, 1);
 sf::Texture wTextRook2;
 
-chessPieces wSpriteKnight1(1, 7, 0);
+chessPieces wSpriteKnight1(1, 7, 1);
 sf::Texture wTextKnight1;
 
-chessPieces wSpriteKnight2(6, 7, 0);
+chessPieces wSpriteKnight2(6, 7, 1);
 sf::Texture wTextKnight2;
 
-chessPieces wSpriteBishop1(2, 7, 0);
+chessPieces wSpriteBishop1(2, 7, 1);
 sf::Texture wTextBishop1;
 
-chessPieces wSpriteBishop2(5, 7, 0);
+chessPieces wSpriteBishop2(5, 7, 1);
 sf::Texture wTextBishop2;
 
-chessPieces wSpriteQueen(3, 7, 0);
+chessPieces wSpriteQueen(3, 7, 1);
 sf::Texture wTextQueen;
 
-chessPieces wSpriteKing(4, 7, 0);
+chessPieces wSpriteKing(4, 7, 1);
 sf::Texture wTextKing;
 
-chessPieces greySpriteDot(4, 3, 0);
-sf::Texture greyTextDot;
+//chessPieces greySpriteDot(4, 3, 0);
+//sf::Texture greyTextDot;
 
 
 pawnWhiteMovement* whiteP = new pawnWhiteMovement;
 pawnBlackMovement* blackP = new pawnBlackMovement;
 rookMovement* rook = new rookMovement;
 knightMovement* knight = new knightMovement;
+bishopMovement* bishop = new bishopMovement;
+queenMovement* queen = new queenMovement;
+kingMovement* king = new kingMovement;
 
 int findPositionX(float pX) {
     float num = 0;
@@ -537,21 +780,25 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
     bTextBishop1.loadFromFile("pi/bBishop.png");
     bSpriteBishop1.setTexture(bTextBishop1);
     bSpriteBishop1.setPosition(150, y1);
+    bSpriteBishop1.setMoveStrat(bishop);
     holder.push_back(bSpriteBishop1);
 
     bTextBishop2.loadFromFile("pi/bBishop.png");
     bSpriteBishop2.setTexture(bTextBishop2);
     bSpriteBishop2.setPosition(375, y1);
+    bSpriteBishop2.setMoveStrat(bishop);
     holder.push_back(bSpriteBishop2);
 
     bTextKing.loadFromFile("pi/bKing.png");
     bSpriteKing.setTexture(bTextKing);
     bSpriteKing.setPosition(225, y1);
+    bSpriteKing.setMoveStrat(king);
     holder.push_back(bSpriteKing);
 
     bTextQueen.loadFromFile("pi/bQueen.png");
     bSpriteQueen.setTexture(bTextQueen);
     bSpriteQueen.setPosition(300, y1);
+    bSpriteQueen.setMoveStrat(queen);
     holder.push_back(bSpriteQueen);
 
 
@@ -636,21 +883,25 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
     wTextBishop1.loadFromFile("pi/wBishop.png");
     wSpriteBishop1.setTexture(wTextBishop1);
     wSpriteBishop1.setPosition(150, y4);
+    wSpriteBishop1.setMoveStrat(bishop);
     holder.push_back(wSpriteBishop1);
 
     wTextBishop2.loadFromFile("pi/wBishop.png");
     wSpriteBishop2.setTexture(wTextBishop2);
     wSpriteBishop2.setPosition(375, y4);
+    wSpriteBishop2.setMoveStrat(bishop);
     holder.push_back(wSpriteBishop2);
 
     wTextQueen.loadFromFile("pi/wQueen.png");
     wSpriteQueen.setTexture(wTextQueen);
     wSpriteQueen.setPosition(225, y4);
+    wSpriteQueen.setMoveStrat(queen);
     holder.push_back(wSpriteQueen);
 
     wTextKing.loadFromFile("pi/wKing.png");
     wSpriteKing.setTexture(wTextKing);
     wSpriteKing.setPosition(300, y4);
+    wSpriteKing.setMoveStrat(king);
     holder.push_back(wSpriteKing);
     }
 
@@ -705,7 +956,7 @@ int main()
     int mouseY = 0;
     int posX = 0;
     int posY = 0;
-    int turn = 1;
+    int turn = 3;
 
     sf::Vector2f mouse;
     
@@ -736,14 +987,14 @@ int main()
 
             
             for (int i = 0; i < holder.size(); i++) {
-                if (!holder[i].checkAlive() || holder[i].getColor() == turn % 2) {
+                if (!holder[i].checkAlive() || holder[i].getColor() == (turn % 2) + 1) {
                     continue;
                 }
                 if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
                     mouseClicked = true;
 
                     if (holder[i].getGlobalBounds().contains(event.mouseButton.x, event.mouseButton.y)) {
-                        //cout << "Found at :" << event.mouseButton.x << endl;
+                        cout << "Found at :" << event.mouseButton.x << endl;
                         holder[i].movement();
                         vectX = holder[i].getPositionX();
                         vectY = holder[i].getPositionY();
@@ -837,6 +1088,9 @@ int main()
     delete blackP;
     delete rook;
     delete knight;
+    delete bishop;
+    delete queen;
+    delete king;
 
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
