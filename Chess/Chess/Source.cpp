@@ -6,19 +6,28 @@ using namespace std;
 
 //Since the board is 600x600 for an 8x8, each square is a 75x75 piece
 
-vector<vector<int>> board = { {2,2,2,2,2,2,2,2},
+vector<vector<int>> board = { {2,2,2,-2,2,2,2,2},
                             {2,2,2,2,2,2,2,2},
                             {0,0,0,0,0,0,0,0},
                             {0,0,0,0,0,0,0,0},
                             {0,0,0,0,0,0,0,0},
                             {0,0,0,0,0,0,0,0},
                             {1,1,1,1,1,1,1,1},
-                            {1,1,1,1,1,1,1,1} };
+                            {1,1,1,1,-1,1,1,1} };
 
 int vectX = 0;
 int vectY = 0;
+bool check = false;
+int checkX = 0;
+int checkY = 0;
+int colorP = 0;
+bool blockableP = false;
 
+int wKingPosX = 4;
+int wKingPosY = 7;
 
+int bKingPosX = 3;
+int bKingPosY = 0;
 //6 == Rook
 //5 == Horse
 //4 == Bishop
@@ -53,6 +62,7 @@ private:
     vector<vector<int>> availSpaces;
     int boardX;
     int boardY;
+    bool blockable = true;
 
 public:
     chessPieces(int x, int y, int c) {
@@ -104,6 +114,12 @@ public:
     int getColor() {
         return color;
     }
+    void setBlockable() {
+        blockable = false;
+    }
+    bool getBlockable() {
+        return blockable;
+    }
 };
 
 vector<chessPieces> holder;
@@ -115,9 +131,19 @@ chessPieces findPiece(int x, int y) {
         }
     }
 }
+
+void checkerino(int color,int positionX,int positionY) {
+        check = true;
+        checkX = positionX;
+        checkY = positionY;
+        blockableP = true;
+        colorP = color;
+    }
+
 class pawnWhiteMovement : public movementStrat {
 public:
     virtual void move(chessPieces* pawn) {
+        pawn->setBlockable();
         bool fMove = pawn->getFirstMove();
         int positionX = pawn->getPositionX();
         int positionY = pawn->getPositionY();
@@ -153,6 +179,7 @@ public:
 class pawnBlackMovement : public movementStrat {
 public:
     virtual void move(chessPieces* pawn) {
+        pawn->setBlockable();
         bool fMove = pawn->getFirstMove();
         int positionX = pawn->getPositionX();
         int positionY = pawn->getPositionY();
@@ -196,18 +223,30 @@ public:
         int left = positionX;//Look for left values
         int right = positionX;//Look for right values
 
+        int color = rook->getColor();
+
         while (left-1 >= 0 && board[positionY][left-1] == 0) {
             --left;
         }
-        if (left != 0 && board[positionY][left - 1] != 0) {
+        
+        if (left != 0 && board[positionY][left - 1] != color) {
             --left;
+            if (board[positionY][left] != color * -1 && board[positionY][left] < 0) {
+                checkerino(color, positionX, positionY);
+            }
         }
+
         while (right+1 <= 7 && board[positionY][right+1] == 0) {
             ++right;
         }
-        if (right != 7 && board[positionY][right + 1] != 0) {
+        
+        if (right != 7 && board[positionY][right + 1] != color) {
             ++right;
+            if (board[positionY][right] != color * -1 && board[positionY][right] < 0) {
+                checkerino(color, positionX, positionY);
+            }
         }
+        
         //cout << "left: " << left << endl;
         //cout << "right: " << right << endl;
 
@@ -224,18 +263,25 @@ public:
 
         while (top-1 >= 0 && board[top-1][positionX] == 0) {
             --top;
-            
         }
-        if (top != 0 && board[top-1][positionX] != 0) {
+        if (top != 0 && board[top-1][positionX] != color) {
             --top;
+            if (board[top][positionX] != color * -1 && board[top][positionX] < 0) {
+                checkerino(color, positionX, positionY);
+            }
         }
+        
         while (bot+1 <= 7 && board[bot+1][positionX] == 0) {
             ++bot;
             
         }
-        if (bot != 7 && board[bot+1][positionX] != 0) {
+        if (bot != 7 && board[bot+1][positionX] != color) {
             ++bot;
+            if (board[bot][positionX] != color * -1 && board[bot][positionX] < 0) {
+                checkerino(color, positionX, positionY);
+            }
         }
+        
 
         //cout << "top: " << top << endl;
         //cout << "bot: " << bot << endl;
@@ -254,15 +300,22 @@ public:
 class knightMovement : public movementStrat {
 public:
     virtual void move(chessPieces* knight) {
+        knight->setBlockable();
         bool fMove = knight->getFirstMove();
         int positionX = knight->getPositionX();
         int positionY = knight->getPositionY();
 
         int pointX = positionX - 2;
         int pointY = positionY - 1;
+
+        int color = knight->getColor();
         for (int i = 0; i < 2; i++) {//top left section
             if (pointX >= 0 && pointY >= 0) {
                 knight->pushAvailSpaces(vector<int> {pointY, pointX});
+                if (board[pointY][pointX] != color * -1 && board[pointY][pointX] < 0) {
+                    checkerino(color, positionX, positionY);
+                    blockableP = false;
+                }
             }
             pointX += 1;
             pointY -= 1;
@@ -273,6 +326,10 @@ public:
         for (int i = 0; i < 2; i++) {//top right section
             if (pointX <= 7  && pointY >= 0) {
                 knight->pushAvailSpaces(vector<int> {pointY, pointX});
+                if (board[pointY][pointX] != color * -1 && board[pointY][pointX] < 0) {
+                    checkerino(color, positionX, positionY);
+                    blockableP = false;
+                }
             }
             pointX += 1;
             pointY += 1;
@@ -283,6 +340,10 @@ public:
         for (int i = 0; i < 2; i++) {//bottom right section
             if (pointX <= 7 && pointY <= 7) {
                 knight->pushAvailSpaces(vector<int> {pointY, pointX});
+                if (board[pointY][pointX] != color * -1 && board[pointY][pointX] < 0) {
+                    checkerino(color, positionX, positionY);
+                    blockableP = false;
+                }
             }
             pointX -= 1;
             pointY += 1;
@@ -293,6 +354,10 @@ public:
         for (int i = 0; i < 2; i++) {//top right section
             if (pointX >= 0 && pointY <= 7) {
                 knight->pushAvailSpaces(vector<int> {pointY, pointX});
+                if (board[pointY][pointX] != color * -1 && board[pointY][pointX] < 0) {
+                    checkerino(color, positionX, positionY);
+                    blockableP = false;
+                }
             }
             pointX -= 1;
             pointY -= 1;
@@ -311,6 +376,8 @@ public:
         int positionX = bishop->getPositionX();
         int positionY = bishop->getPositionY();
 
+        int color = bishop->getColor();
+
         int left = positionX;//Look for left values
         
         int top = positionY;
@@ -320,9 +387,12 @@ public:
             --top;
             bishop->pushAvailSpaces(vector<int> {top, left});
         }
-        if (left != 0 && top != 0 && board[top-1][left - 1] != 0) {
+        if (left != 0 && top != 0 && board[top-1][left - 1] != color) {
             --left;
             --top;
+            if (board[top][left] != color * -1 && board[top][left] < 0) {
+                checkerino(color, positionX, positionY);
+            }
             bishop->pushAvailSpaces(vector<int> {top, left});
         }
 
@@ -333,9 +403,12 @@ public:
             ++bot;
             bishop->pushAvailSpaces(vector<int> {bot, left});
         }
-        if (left != 0 && bot != 7 && board[bot + 1][left - 1] != 0) {
+        if (left != 0 && bot != 7 && board[bot + 1][left - 1] != color) {
             --left;
             ++bot;
+            if (board[bot][left] != color * -1 && board[bot][left] < 0) {
+                checkerino(color, positionX, positionY);
+            }
             bishop->pushAvailSpaces(vector<int> {bot, left});
         }
 
@@ -347,23 +420,29 @@ public:
             --top;
             bishop->pushAvailSpaces(vector<int> {top, right});
         }
-        if (right != 7 && top != 0 && board[top - 1][right + 1] != 0) {
+        if (right != 7 && top != 0 && board[top - 1][right + 1] != color) {
             ++right;
             --top;
+            if (board[top][right] != color * -1 && board[top][right] < 0) {
+                checkerino(color, positionX, positionY);
+            }
             bishop->pushAvailSpaces(vector<int> {top, right});
         }
 
         right = positionX;
         bot = positionY;
 
-        while (right + 1 <= 7 && bot + 1 <= 7 && board[bot + 1][right + 1] == 0) {//Top Right
+        while (right + 1 <= 7 && bot + 1 <= 7 && board[bot + 1][right + 1] == 0) {//Bot Right
             ++right;
             ++bot;
             bishop->pushAvailSpaces(vector<int> {bot, right});
         }
-        if (right != 7 && bot != 7 && board[bot + 1][right + 1] != 0) {
+        if (right != 7 && bot != 7 && board[bot + 1][right + 1] != color) {
             ++right;
             ++bot;
+            if (board[bot][right] != color * -1 && board[bot][right] < 0) {
+                checkerino(color, positionX, positionY);
+            }
             bishop->pushAvailSpaces(vector<int> {bot, right});
         }
 
@@ -386,8 +465,7 @@ public:
 
         int top = positionY;
 
-        while (left - 1 >= 0 && top - 1 >= 0 && board[top - 1][left - 1] != color) {//Top Left
-            cout << "ooga booga" << endl;
+        while (left - 1 >= 0 && top - 1 >= 0 && board[top - 1][left - 1] == 0) {//Top Left
             --left;
             --top;
             queen->pushAvailSpaces(vector<int> {top, left});
@@ -395,12 +473,15 @@ public:
         if (left != 0 && top != 0 && board[top - 1][left - 1] != color) {
             --left;
             --top;
+            if (board[top][left] != color * -1 && board[top][left] < 0) {
+                checkerino(color, positionX, positionY);
+            }
             queen->pushAvailSpaces(vector<int> {top, left});
         }
 
         left = positionX;
         int bot = positionY;
-        while (left - 1 >= 0 && bot + 1 <= 7 && board[bot + 1][left - 1] != color) {//Bottom Left
+        while (left - 1 >= 0 && bot + 1 <= 7 && board[bot + 1][left - 1] == 0) {//Bottom Left
             --left;
             ++bot;
             queen->pushAvailSpaces(vector<int> {bot, left});
@@ -408,13 +489,16 @@ public:
         if (left != 0 && bot != 7 && board[bot + 1][left - 1] != color) {
             --left;
             ++bot;
+            if (board[bot][left] != color * -1 && board[bot][left] < 0) {
+                checkerino(color, positionX, positionY);
+            }
             queen->pushAvailSpaces(vector<int> {bot, left});
         }
 
         int right = positionX;//Look for right values
         top = positionY;
 
-        while (right + 1 <= 7 && top - 1 >= 0 && board[top - 1][right + 1] != color) {//Top Right
+        while (right + 1 <= 7 && top - 1 >= 0 && board[top - 1][right + 1] == 0) {//Top Right
             ++right;
             --top;
             queen->pushAvailSpaces(vector<int> {top, right});
@@ -422,13 +506,17 @@ public:
         if (right != 7 && top != 0 && board[top - 1][right + 1] != color) {
             ++right;
             --top;
+            if (board[top][right] != color * -1 && board[top][right] < 0) {
+                checkerino(color, positionX, positionY);
+            }
             queen->pushAvailSpaces(vector<int> {top, right});
         }
 
         right = positionX;
         bot = positionY;
+        
 
-        while (right + 1 <= 7 && bot + 1 <= 7 && board[bot + 1][right + 1] != color) {//Top Right
+        while (right + 1 <= 7 && bot + 1 <= 7 && board[bot + 1][right + 1] == 0) {//Bottom Right
             ++right;
             ++bot;
             queen->pushAvailSpaces(vector<int> {bot, right});
@@ -436,23 +524,32 @@ public:
         if (right != 7 && bot != 7 && board[bot + 1][right + 1] != color) {
             ++right;
             ++bot;
+            if (board[bot][right] != color * -1 && board[bot][right] < 0) {
+                checkerino(color, positionX, positionY);
+            }
             queen->pushAvailSpaces(vector<int> {bot, right});
         }
         //=========================================================================================================================
         left = positionX;//Look for left values
         right = positionX;//Look for right values
 
-        while (left - 1 >= 0 && board[positionY][left - 1] != color) {
+        while (left - 1 >= 0 && board[positionY][left - 1] == 0) {
             --left;
         }
         if (left != 0 && board[positionY][left - 1] != color) {
             --left;
+            if (board[positionY][left] != color * -1 && board[positionY][left] < 0) {
+                checkerino(color, positionX, positionY);
+            }
         }
-        while (right + 1 <= 7 && board[positionY][right + 1] != color) {
+        while (right + 1 <= 7 && board[positionY][right + 1] == 0) {
             ++right;
         }
         if (right != 7 && board[positionY][right + 1] != color) {
             ++right;
+            if (board[positionY][right] != color * -1 && board[positionY][right] < 0) {
+                checkerino(color, positionX, positionY);
+            }
         }
         //cout << "left: " << left << endl;
         //cout << "right: " << right << endl;
@@ -466,25 +563,25 @@ public:
 
         top = positionY;
         bot = positionY;
-
-
-        while (top - 1 >= 0 && board[top - 1][positionX] != color) {
+        while (top - 1 >= 0 && board[top - 1][positionX] == 0) {
             --top;
-
         }
         if (top != 0 && board[top - 1][positionX] != color) {
             --top;
+            if (board[top][positionX] != color * -1 && board[top][positionX] < 0) {
+                checkerino(color, positionX, positionY);
+            }
         }
-        while (bot + 1 <= 7 && board[bot + 1][positionX] == color) {
+        while (bot + 1 <= 7 && board[bot + 1][positionX] == 0) {
             ++bot;
-
         }
         if (bot != 7 && board[bot + 1][positionX] != color) {
             ++bot;
+            if (board[bot][positionX] != color * -1 && board[bot][positionX] < 0) {
+                checkerino(color, positionX, positionY);
+            }
         }
-
-        //cout << "top: " << top << endl;
-        //cout << "bot: " << bot << endl;
+        
         for (int i = top; i <= bot; i++) {
             if (i == positionY) {
                 continue;
@@ -500,6 +597,7 @@ public:
 class kingMovement : public movementStrat {
 public:
     virtual void move(chessPieces* king) {
+        king->setBlockable();
         bool fMove = king->getFirstMove();
         int positionX = king->getPositionX();
         int positionY = king->getPositionY();
@@ -592,7 +690,7 @@ sf::Texture bTextBishop2;
 chessPieces bSpriteQueen(4, 0, 2);
 sf::Texture bTextQueen;
 
-chessPieces bSpriteKing(3, 0, 2);
+chessPieces bSpriteKing(3, 0, -2);
 sf::Texture bTextKing;
 
 chessPieces wSpritePawn1(0 , 6, 1);
@@ -640,7 +738,7 @@ sf::Texture wTextBishop2;
 chessPieces wSpriteQueen(3, 7, 1);
 sf::Texture wTextQueen;
 
-chessPieces wSpriteKing(4, 7, 1);
+chessPieces wSpriteKing(4, 7, -1);
 sf::Texture wTextKing;
 
 //chessPieces greySpriteDot(4, 3, 0);
@@ -906,7 +1004,8 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
     }
 
     bool checkIfSameColor(chessPieces temp1, chessPieces temp2) {
-        if (temp1.getColor() == temp2.getColor()) {
+        if (temp1.getColor() == temp2.getColor() || temp1.getColor() == temp2.getColor() * -1) {
+            cout << "Same Color!!!" << endl;
             return true;
         }
         return false;
@@ -925,12 +1024,141 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
         return -1;
     }
 
-    bool checkValidMove(vector<vector<int>> spaces, int posX, int posY) {
-        
-        for (int i = 0; i < spaces.size(); i++) {
-            cout << "checking X: " << posX << " , and y: " << posY << ", with (" << spaces[i][1] << ", " << spaces[i][0] << ")" << endl;
-            if (spaces[i][0] == posY && spaces[i][1] == posX) {
-                return true;
+    vector<vector<int>> path;
+
+    void findPathKing(int kingPosX, int kingPosY) {
+        int pointX = checkX;
+        int pointY = checkY;
+
+        int point = pointY;
+
+        bool blockable = blockableP;
+
+        path.clear();
+        if (!blockable) {
+            cout << "not blockable" << endl;
+        }
+        cout << pointX << endl;
+        cout << kingPosX << endl;
+        cout << point << endl << kingPosY << endl;
+        while (blockable && pointX == kingPosX && point != kingPosY) {//If they are on the same column
+            path.push_back(vector<int> {point, pointX});
+            if (kingPosY < pointY) {//White King is above
+                --point;
+            }
+            else {//White King is below
+                ++point;
+            }
+        }
+
+        point = pointX;
+        while (blockable && pointY == kingPosY && point != kingPosX) {//If they are on the same row
+            path.push_back(vector<int> {pointY, point});
+            if (kingPosX < pointX) {//White King is left
+                --point;
+            }
+            else {//White King is right
+                ++point;
+            }
+        }
+
+        int x = pointX;
+        int y = pointY;
+        while (blockable && x < kingPosX && y < kingPosY) {//Top Left
+            ++x;
+            ++y;
+            path.push_back(vector<int> {y, x});
+        }
+
+        x = pointX;
+        y = pointY;
+        while (blockable && x > kingPosX && y < kingPosY) {//Top Right
+            --x;
+            ++y;
+            path.push_back(vector<int> {y, x});
+        }
+
+        x = pointX;
+        y = pointY;
+        while (blockable && x > kingPosX && y > kingPosY) {//Bot Right
+            --x;
+            --y;
+            path.push_back(vector<int> {y, x});
+        }
+
+        x = pointX;
+        y = pointY;
+        while (blockable && x < kingPosX && y < kingPosY) {//Bot Right
+            ++x;
+            --y;
+            path.push_back(vector<int> {y, x});
+        }
+        cout << "Path Coord: << ";
+        for (int i = 0; i < path.size(); i++) {
+            cout << "(" << path[i][1] << " , " << path[i][0] << ")" << " >>";
+        }
+        cout << endl;
+    }
+
+    bool checkValidMove(vector<vector<int>> spaces, int posX, int posY, chessPieces temp) {
+        if (check) {
+            int color = temp.getColor();
+            //cout << "posX: " << posX << " , posY: " << posY << " , checkX: " << checkX << " , checkY: " << checkY << endl;
+            if (color < 0 && color != colorP * -1) {//We are holding the king opposite color of the piece that is checking it
+                for (int i = 0; i < spaces.size(); i++) {//If we are hovering over the checking target, we have to check if we can even move to that location
+                    if (spaces[i][0] == posY && spaces[i][1] == posX) {
+                        check = false; //We've moved out of the way
+                        cout << "===================================== NO CHECK =====================================" << endl;
+                        checkX = 10;
+                        checkY = 10;
+                        return true;
+                    }
+                }
+            }
+
+            if (colorP == 1) {//Get the path towards the king to check if its blockable
+                findPathKing(bKingPosX, bKingPosY);
+            }
+            else {
+                findPathKing(wKingPosX, wKingPosY);
+            }
+
+            for (int i = 0; i < path.size(); i++) {
+                cout << "checking: (" << posX << " with " << path[i][1] << ") and (" << posY << " with " << path[i][0] << ")" << endl;
+                if (posX == path[i][1] && posY == path[i][0]) {//If the spot we are going to is in between the checking target and the king, then we say it is valid spot
+                    cout << "blockable!" << endl;
+                    check = false;
+                    cout << "===================================== NO CHECK =====================================" << endl;
+                    checkX = 10;
+                    checkY = 10;
+                    path.clear();
+                    cout << "path cleared" << endl;
+                    return true;
+                }
+            }
+            if (posX != checkX || posY != checkY) {//If we are in check but we are not "killing" the checking target, return false
+                return false;
+            }
+            for (int i = 0; i < spaces.size(); i++) {//If we are hovering over the checking target, we have to check if we can even move to that location
+                if (spaces[i][0] == posY && spaces[i][1] == posX) {
+                    //cout << "HAS TO BE X: " << posX << " , and y: " << posY << ", with (" << spaces[i][1] << ", " << spaces[i][0] << ")" << endl;
+                    check = false; //We've killed the checking piece
+                    cout << "===================================== NO CHECK =====================================" << endl;
+                    checkX = 10;
+                    checkY = 10;
+                    path.clear();
+                    return true;
+                }
+            }
+            path.clear();
+            return false;
+        }
+        else {
+            for (int i = 0; i < spaces.size(); i++) {
+                cout << "checking X: " << posX << " , and y: " << posY << ", with (" << spaces[i][1] << ", " << spaces[i][0] << ")" << endl;
+                if (spaces[i][0] == posY && spaces[i][1] == posX) {
+                    return true;
+                }
             }
         }
         return false;
@@ -1021,14 +1249,14 @@ int main()
                     posX = holder[z].getLocalBounds().left + mouseX;
                     posY = holder[z].getLocalBounds().top + mouseY;
                     vector<vector<int>> spaces = holder[z].getAvailSpaces();
-                    cout << "posX: " << posX << endl;
-                    cout << "posY: " << posY << endl;
+                    //cout << "posX: " << posX << endl;
+                    //cout << "posY: " << posY << endl;
                     int b = checkCollision(posX / 75, posY / 75, z);
 
                     
-                    if (!checkValidMove(spaces, posX/75 , posY/75)) {//The place we are going to is not valid
-                        cout << "invalid!" << endl;
-                        cout << "prevX: " << prevX << ", prevY: " << prevY << ", posX: " << posX << ", posY: " << posY << endl;
+                    if (!checkValidMove(spaces, posX/75 , posY/75, holder[z])) {//The place we are going to is not valid
+                        cout << "Invalid move, try again" << endl;
+                        //cout << "prevX: " << prevX << ", prevY: " << prevY << ", posX: " << posX << ", posY: " << posY << endl;
                         holder[z].setPosition(findPositionX(prevX), findPositionY(prevY));
                     }
                     else if (b != -1) {
@@ -1046,13 +1274,28 @@ int main()
                     }
                     else {
                         holder[z].setNewPosition(posX / 75, posY / 75);
+                        if (holder[z].getColor() < 0) { //Check if we're holding a king
+                            if (holder[z].getColor() == -1) { //Update White King's Coordiantes
+                                wKingPosX = posX / 75;
+                                wKingPosY = posY / 75;
+                            }
+                            else { //Update Black King's Coordinates
+                                bKingPosX = posX / 75;
+                                bKingPosY = posY / 75;
+                            }
+                        }
                         holder[z].setPosition(findPositionX(posX), findPositionY(posY));
-                        cout << "prevX: " << prevX << ", prevY: " << prevY << ", posX: " << posX << ", posY: " << posY << endl;
+                        //cout << "prevX: " << prevX << ", prevY: " << prevY << ", posX: " << posX << ", posY: " << posY << endl;
                         if (prevX != posX / 75 && prevY != posY / 75) { //If you just place the piece in the same position, dont skip your turn
                             ++turn;
                             
                             holder[z].firstMoveMade();
                         }
+                    }
+                    holder[z].clearAvailSpaces();
+                    holder[z].movement();
+                    if (check == true) {
+                        cout << "===================================== CHECK =====================================" << endl;
                     }
                     holder[z].clearAvailSpaces();
             }
