@@ -5,7 +5,10 @@ Best used in visual studios, as the SFML library is super sensitive.
 The best video I found for the installation of SFML is [here](https://www.youtube.com/watch?v=neIoDQ71yb0).
 
 Here is an example video showing it off:
-https://www.youtube.com/watch?v=r0uIpLdgwQ8
+
+[![Ruy Lopez Example]()](https://www.youtube.com/watch?v=r0uIpLdgwQ8)
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/r0uIpLdgwQ8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 Why did I write everything into one file (Source.cpp)? For some reason the SFML library only works in visual studios, and I'm not really familiar with it. Adding different files and using more conventional form of coding in visual studios is something that'd take me a while to learn. But it's more just frustrating to deal with the janky library. If I could split it up, I would.
 
