@@ -6,7 +6,7 @@ using namespace std;
 
 //Since the board is 600x600 for an 8x8, each square is a 75x75 piece
 
-vector<vector<int>> board = { {2,2,2,-2,2,2,2,2},
+vector<vector<int>> board = { {2,2,2,2,-2,2,2,2},
                             {2,2,2,2,2,2,2,2},
                             {0,0,0,0,0,0,0,0},
                             {0,0,0,0,0,0,0,0},
@@ -17,7 +17,8 @@ vector<vector<int>> board = { {2,2,2,-2,2,2,2,2},
 
 int vectX = 0;
 int vectY = 0;
-bool check = false;
+int check = 0;//Count # of people who are "checking" the king.
+int checkColor = 0;
 int checkX = 0;
 int checkY = 0;
 int colorP = 0;
@@ -26,7 +27,7 @@ bool blockableP = false;
 int wKingPosX = 4;
 int wKingPosY = 7;
 
-int bKingPosX = 3;
+int bKingPosX = 4;
 int bKingPosY = 0;
 //6 == Rook
 //5 == Horse
@@ -51,15 +52,18 @@ public:
     virtual void move(chessPieces* piece) = 0;
 };
 
-
+chessPieces* pieceThatIsChecking;
 
 class chessPieces : public sf::Sprite {
 private:
     int color; //0 = white, 1 = black
     bool firstMove = false;
     bool isAlive = true;
+    bool isPawn = false;
+    bool isRook = false;
     movementStrat* strat = nullptr;
     vector<vector<int>> availSpaces;
+    vector<vector<int>> specialSpaces;
     int boardX;
     int boardY;
     bool blockable = true;
@@ -79,8 +83,23 @@ public:
     bool checkAlive() {
         return isAlive;
     }
+    void setPawn() {
+       isPawn = true;
+    }
+    bool getPawn() {
+        return isPawn;
+    }
+    void setRook() {
+        isRook = true;
+    }
+    bool getRook() {
+        return isRook;
+    }
     void setMoveStrat(movementStrat* strat_) {
         strat = strat_;
+    }
+    movementStrat* getMovementStrat() {
+        return strat;
     }
     void movement() {
         strat->move(this);
@@ -88,16 +107,32 @@ public:
     void pushAvailSpaces(vector<int> temp) {
         availSpaces.push_back(temp);
     }
+    void pushSpecialSpaces(vector<int> temp) {
+        specialSpaces.push_back(temp);
+    }
     void clearAvailSpaces() {
         availSpaces.clear();
     }
+    void clearspecialSpaces() {
+        specialSpaces.clear();
+    }
     vector<vector<int>> getAvailSpaces() {
         return availSpaces;
+    }
+    vector<vector<int>> getSpecialSpaces() {
+        return specialSpaces;
     }
     void setNewPosition(int x, int y) {
         board[y][x] = board[vectY][vectX];
         board[vectY][vectX] = 0;
         cout << "changing board position from (" << vectX << ", " << vectY << ") to (" << x << " , " << y << ")" << endl;
+        boardX = x;
+        boardY = y;
+    }
+    void setNewPositionCastle(int x, int y, int vX, int vY) {
+        board[y][x] = board[vY][vX];
+        board[vY][vX] = 0;
+        cout << "changing board position from (" << vX << ", " << vY << ") to (" << x << " , " << y << ")" << endl;
         boardX = x;
         boardY = y;
     }
@@ -120,9 +155,25 @@ public:
     bool getBlockable() {
         return blockable;
     }
+    void checkerino(int color, int positionX, int positionY) {
+        ++check;
+        checkX = positionX;
+        checkY = positionY;
+        blockableP = true;
+        colorP = color;
+        if (color == 1) {
+            checkColor = 2;
+        }
+        else {
+            checkColor = 1;
+        }
+        pieceThatIsChecking = this;
+    }
 };
 
 vector<chessPieces> holder;
+
+
 
 chessPieces findPiece(int x, int y) {
     for (int i = 0; i < holder.size(); i++) {
@@ -132,27 +183,32 @@ chessPieces findPiece(int x, int y) {
     }
 }
 
-void checkerino(int color,int positionX,int positionY) {
-        check = true;
-        checkX = positionX;
-        checkY = positionY;
-        blockableP = true;
-        colorP = color;
-    }
+
 
 class pawnWhiteMovement : public movementStrat {
 public:
     virtual void move(chessPieces* pawn) {
         pawn->setBlockable();
+        pawn->setPawn();//Setting isPawn to  true
         bool fMove = pawn->getFirstMove();
         int positionX = pawn->getPositionX();
         int positionY = pawn->getPositionY();
 
+        int color = pawn->getColor();
+
         if (positionY != 0 && positionX != 0 && board[positionY - 1][positionX - 1] != 0) {
             pawn->pushAvailSpaces(vector<int> {positionY - 1, positionX - 1});
+            pawn->pushSpecialSpaces(vector<int> {positionY - 1, positionX - 1});
+            if (board[positionY - 1][positionX - 1] != color * -1 && board[positionY - 1][positionX- 1] < 0) {
+                pawn->checkerino(color, positionX, positionY);
+            }
         }
         if (positionY != 0 && positionX != 7 && board[positionY - 1][positionX + 1] != 0) {
             pawn->pushAvailSpaces(vector<int> {positionY - 1, positionX + 1});
+            pawn->pushSpecialSpaces(vector<int> {positionY - 1, positionX + 1});
+            if (board[positionY - 1][positionX + 1] != color * -1 && board[positionY - 1][positionX + 1] < 0) {
+                pawn->checkerino(color, positionX, positionY);
+            }
         }
 
         if (board[positionY - 1][positionX] != 0 || positionY == 0) {
@@ -160,6 +216,7 @@ public:
         }
         else if (!fMove) {//No piece in front, but you haven't made your first move yet
             if (board[positionY - 2][positionX] != 0) {
+                
                 pawn->pushAvailSpaces(vector<int> {positionY - 1, positionX});
             }
             else {//If there isnt as piece two moves ahead, then both spaces are free
@@ -180,15 +237,26 @@ class pawnBlackMovement : public movementStrat {
 public:
     virtual void move(chessPieces* pawn) {
         pawn->setBlockable();
+        pawn->setPawn();
         bool fMove = pawn->getFirstMove();
         int positionX = pawn->getPositionX();
         int positionY = pawn->getPositionY();
 
+        int color = pawn->getColor();
+
         if (positionY != 7 && positionX != 0 && board[positionY + 1][positionX - 1] != 0) {
             pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX - 1});
+            pawn->pushSpecialSpaces(vector<int> {positionY + 1, positionX - 1});
+            if (board[positionY + 1][positionX - 1] != color * -1 && board[positionY + 1][positionX - 1] < 0) {
+                pawn->checkerino(color, positionX, positionY);
+            }
         }
         if (positionY != 7 && positionX != 7 && board[positionY + 1][positionX + 1] != 0) {
             pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX + 1});
+            pawn->pushSpecialSpaces(vector<int> {positionY + 1, positionX + 1});
+            if (board[positionY + 1][positionX + 1] != color * -1 && board[positionY + 1][positionX + 1] < 0) {
+                pawn->checkerino(color, positionX, positionY);
+            }
         }
 
         if (board[positionY + 1][positionX] != 0 || positionY == 7) {
@@ -199,6 +267,7 @@ public:
                 pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX});
             }
             else {//If there isnt as piece two moves ahead, then both spaces are free
+
                 pawn->pushAvailSpaces(vector<int> {positionY + 1, positionX});
                 pawn->pushAvailSpaces(vector<int> {positionY + 2, positionX});
             }
@@ -217,6 +286,7 @@ class rookMovement : public movementStrat {
 public:
     virtual void move(chessPieces* rook) {
         bool fMove = rook->getFirstMove();
+        rook->setRook();//SEtting rook to true.
         int positionX = rook->getPositionX();
         int positionY = rook->getPositionY();
 
@@ -232,7 +302,7 @@ public:
         if (left != 0 && board[positionY][left - 1] != color) {
             --left;
             if (board[positionY][left] != color * -1 && board[positionY][left] < 0) {
-                checkerino(color, positionX, positionY);
+                rook->checkerino(color, positionX, positionY);
             }
         }
 
@@ -243,7 +313,7 @@ public:
         if (right != 7 && board[positionY][right + 1] != color) {
             ++right;
             if (board[positionY][right] != color * -1 && board[positionY][right] < 0) {
-                checkerino(color, positionX, positionY);
+                rook->checkerino(color, positionX, positionY);
             }
         }
         
@@ -267,7 +337,7 @@ public:
         if (top != 0 && board[top-1][positionX] != color) {
             --top;
             if (board[top][positionX] != color * -1 && board[top][positionX] < 0) {
-                checkerino(color, positionX, positionY);
+                rook->checkerino(color, positionX, positionY);
             }
         }
         
@@ -278,7 +348,7 @@ public:
         if (bot != 7 && board[bot+1][positionX] != color) {
             ++bot;
             if (board[bot][positionX] != color * -1 && board[bot][positionX] < 0) {
-                checkerino(color, positionX, positionY);
+                rook->checkerino(color, positionX, positionY);
             }
         }
         
@@ -313,7 +383,7 @@ public:
             if (pointX >= 0 && pointY >= 0) {
                 knight->pushAvailSpaces(vector<int> {pointY, pointX});
                 if (board[pointY][pointX] != color * -1 && board[pointY][pointX] < 0) {
-                    checkerino(color, positionX, positionY);
+                    knight->checkerino(color, positionX, positionY);
                     blockableP = false;
                 }
             }
@@ -327,7 +397,7 @@ public:
             if (pointX <= 7  && pointY >= 0) {
                 knight->pushAvailSpaces(vector<int> {pointY, pointX});
                 if (board[pointY][pointX] != color * -1 && board[pointY][pointX] < 0) {
-                    checkerino(color, positionX, positionY);
+                    knight->checkerino(color, positionX, positionY);
                     blockableP = false;
                 }
             }
@@ -341,7 +411,7 @@ public:
             if (pointX <= 7 && pointY <= 7) {
                 knight->pushAvailSpaces(vector<int> {pointY, pointX});
                 if (board[pointY][pointX] != color * -1 && board[pointY][pointX] < 0) {
-                    checkerino(color, positionX, positionY);
+                    knight->checkerino(color, positionX, positionY);
                     blockableP = false;
                 }
             }
@@ -355,7 +425,7 @@ public:
             if (pointX >= 0 && pointY <= 7) {
                 knight->pushAvailSpaces(vector<int> {pointY, pointX});
                 if (board[pointY][pointX] != color * -1 && board[pointY][pointX] < 0) {
-                    checkerino(color, positionX, positionY);
+                    knight->checkerino(color, positionX, positionY);
                     blockableP = false;
                 }
             }
@@ -391,7 +461,7 @@ public:
             --left;
             --top;
             if (board[top][left] != color * -1 && board[top][left] < 0) {
-                checkerino(color, positionX, positionY);
+                bishop->checkerino(color, positionX, positionY);
             }
             bishop->pushAvailSpaces(vector<int> {top, left});
         }
@@ -407,7 +477,7 @@ public:
             --left;
             ++bot;
             if (board[bot][left] != color * -1 && board[bot][left] < 0) {
-                checkerino(color, positionX, positionY);
+                bishop->checkerino(color, positionX, positionY);
             }
             bishop->pushAvailSpaces(vector<int> {bot, left});
         }
@@ -424,7 +494,7 @@ public:
             ++right;
             --top;
             if (board[top][right] != color * -1 && board[top][right] < 0) {
-                checkerino(color, positionX, positionY);
+                bishop->checkerino(color, positionX, positionY);
             }
             bishop->pushAvailSpaces(vector<int> {top, right});
         }
@@ -441,7 +511,7 @@ public:
             ++right;
             ++bot;
             if (board[bot][right] != color * -1 && board[bot][right] < 0) {
-                checkerino(color, positionX, positionY);
+                bishop->checkerino(color, positionX, positionY);
             }
             bishop->pushAvailSpaces(vector<int> {bot, right});
         }
@@ -474,7 +544,7 @@ public:
             --left;
             --top;
             if (board[top][left] != color * -1 && board[top][left] < 0) {
-                checkerino(color, positionX, positionY);
+                queen->checkerino(color, positionX, positionY);
             }
             queen->pushAvailSpaces(vector<int> {top, left});
         }
@@ -490,7 +560,7 @@ public:
             --left;
             ++bot;
             if (board[bot][left] != color * -1 && board[bot][left] < 0) {
-                checkerino(color, positionX, positionY);
+                queen->checkerino(color, positionX, positionY);
             }
             queen->pushAvailSpaces(vector<int> {bot, left});
         }
@@ -507,7 +577,7 @@ public:
             ++right;
             --top;
             if (board[top][right] != color * -1 && board[top][right] < 0) {
-                checkerino(color, positionX, positionY);
+                queen->checkerino(color, positionX, positionY);
             }
             queen->pushAvailSpaces(vector<int> {top, right});
         }
@@ -525,7 +595,7 @@ public:
             ++right;
             ++bot;
             if (board[bot][right] != color * -1 && board[bot][right] < 0) {
-                checkerino(color, positionX, positionY);
+                queen->checkerino(color, positionX, positionY);
             }
             queen->pushAvailSpaces(vector<int> {bot, right});
         }
@@ -533,22 +603,22 @@ public:
         left = positionX;//Look for left values
         right = positionX;//Look for right values
 
-        while (left - 1 >= 0 && board[positionY][left - 1] == 0) {
+        while (left - 1 >= 0 && board[positionY][left - 1] == 0) { //Left
             --left;
         }
         if (left != 0 && board[positionY][left - 1] != color) {
             --left;
             if (board[positionY][left] != color * -1 && board[positionY][left] < 0) {
-                checkerino(color, positionX, positionY);
+                queen->checkerino(color, positionX, positionY);
             }
         }
-        while (right + 1 <= 7 && board[positionY][right + 1] == 0) {
+        while (right + 1 <= 7 && board[positionY][right + 1] == 0) { //Right
             ++right;
         }
         if (right != 7 && board[positionY][right + 1] != color) {
             ++right;
             if (board[positionY][right] != color * -1 && board[positionY][right] < 0) {
-                checkerino(color, positionX, positionY);
+                queen->checkerino(color, positionX, positionY);
             }
         }
         //cout << "left: " << left << endl;
@@ -563,22 +633,22 @@ public:
 
         top = positionY;
         bot = positionY;
-        while (top - 1 >= 0 && board[top - 1][positionX] == 0) {
+        while (top - 1 >= 0 && board[top - 1][positionX] == 0) { //Top
             --top;
         }
         if (top != 0 && board[top - 1][positionX] != color) {
             --top;
             if (board[top][positionX] != color * -1 && board[top][positionX] < 0) {
-                checkerino(color, positionX, positionY);
+                queen->checkerino(color, positionX, positionY);
             }
         }
-        while (bot + 1 <= 7 && board[bot + 1][positionX] == 0) {
+        while (bot + 1 <= 7 && board[bot + 1][positionX] == 0) { //Bot
             ++bot;
         }
         if (bot != 7 && board[bot + 1][positionX] != color) {
             ++bot;
             if (board[bot][positionX] != color * -1 && board[bot][positionX] < 0) {
-                checkerino(color, positionX, positionY);
+                queen->checkerino(color, positionX, positionY);
             }
         }
         
@@ -629,12 +699,23 @@ public:
             ++point;
         }
 
-        
+        //TO DO: Fix the castle system, we can castle when there's still pieces inbetween the rook and the king!!
         if (positionX - 1 >= 0 && board[positionY][positionX - 1] != king->getColor()) { //Left
             king->pushAvailSpaces(vector<int> {positionY, positionX - 1});
+            chessPieces rook1 = findPiece(positionX - 4, positionY);
+            if (!rook1.getFirstMove() && !king->getFirstMove() && positionX - 3 >= 0 && board[positionY][positionX - 3] != king->getColor() && rook1.getRook()) {//We can Castle
+                cout << "we can castle left" << endl;
+                king->pushSpecialSpaces(vector<int> {positionY, positionX - 3});//To do: fix this
+            }
+            
         }
         if (positionX + 1 <= 7 && board[positionY][positionX + 1] != king->getColor()) { //Right
             king->pushAvailSpaces(vector<int> {positionY, positionX + 1});
+            chessPieces rook1 = findPiece(positionX + 3, positionY);
+            if (!rook1.getFirstMove() && !king->getFirstMove() && positionX + 2 <= 7 && board[positionY][positionX + 2] != king->getColor()  && rook1.getRook()) {//We can Castle
+                cout << "we can castle right" << endl;
+                king->pushSpecialSpaces(vector<int> {positionY, positionX + 2});//To do: fix this
+            }
         }
 
     }
@@ -687,10 +768,10 @@ sf::Texture bTextBishop1;
 chessPieces bSpriteBishop2(5, 0, 2);
 sf::Texture bTextBishop2;
 
-chessPieces bSpriteQueen(4, 0, 2);
+chessPieces bSpriteQueen(3, 0, 2);
 sf::Texture bTextQueen;
 
-chessPieces bSpriteKing(3, 0, -2);
+chessPieces bSpriteKing(4, 0, -2);
 sf::Texture bTextKing;
 
 chessPieces wSpritePawn1(0 , 6, 1);
@@ -753,9 +834,9 @@ bishopMovement* bishop = new bishopMovement;
 queenMovement* queen = new queenMovement;
 kingMovement* king = new kingMovement;
 
-int findPositionX(float pX) {
-    float num = 0;
-    float num2 = 0;
+int findPositionX(int pX) {
+    int num = 0;
+    int num2 = 0;
 
     for (int i = 0; i < 7; i++) {
         num2 = num + 75;
@@ -767,9 +848,9 @@ int findPositionX(float pX) {
     return 525;
 }
 
-int findPositionY(float pY) {
-    float num = 0;
-    float num2 = 0;
+int findPositionY(int pY) {
+    int num = 0;
+    int num2 = 0;
 
     for (int i = 0; i < 7; i++) {
         num2 = num + 75;
@@ -887,17 +968,19 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
     bSpriteBishop2.setMoveStrat(bishop);
     holder.push_back(bSpriteBishop2);
 
+    bTextQueen.loadFromFile("pi/bQueen.png");
+    bSpriteQueen.setTexture(bTextQueen);
+    bSpriteQueen.setPosition(225, y1);
+    bSpriteQueen.setMoveStrat(queen);
+    holder.push_back(bSpriteQueen);
+
     bTextKing.loadFromFile("pi/bKing.png");
     bSpriteKing.setTexture(bTextKing);
-    bSpriteKing.setPosition(225, y1);
+    bSpriteKing.setPosition(300, y1);
     bSpriteKing.setMoveStrat(king);
     holder.push_back(bSpriteKing);
 
-    bTextQueen.loadFromFile("pi/bQueen.png");
-    bSpriteQueen.setTexture(bTextQueen);
-    bSpriteQueen.setPosition(300, y1);
-    bSpriteQueen.setMoveStrat(queen);
-    holder.push_back(bSpriteQueen);
+
 
 
     //--------------------------------------------
@@ -1038,28 +1121,26 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
         if (!blockable) {
             cout << "not blockable" << endl;
         }
-        cout << pointX << endl;
-        cout << kingPosX << endl;
-        cout << point << endl << kingPosY << endl;
         while (blockable && pointX == kingPosX && point != kingPosY) {//If they are on the same column
-            path.push_back(vector<int> {point, pointX});
             if (kingPosY < pointY) {//White King is above
                 --point;
             }
             else {//White King is below
                 ++point;
             }
+            path.push_back(vector<int> {point, pointX});
         }
 
         point = pointX;
         while (blockable && pointY == kingPosY && point != kingPosX) {//If they are on the same row
-            path.push_back(vector<int> {pointY, point});
+            
             if (kingPosX < pointX) {//White King is left
                 --point;
             }
             else {//White King is right
                 ++point;
             }
+            path.push_back(vector<int> {pointY, point});
         }
 
         int x = pointX;
@@ -1100,21 +1181,76 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
         cout << endl;
     }
 
-    bool checkValidMove(vector<vector<int>> spaces, int posX, int posY, chessPieces temp) {
-        if (check) {
-            int color = temp.getColor();
-            //cout << "posX: " << posX << " , posY: " << posY << " , checkX: " << checkX << " , checkY: " << checkY << endl;
-            if (color < 0 && color != colorP * -1) {//We are holding the king opposite color of the piece that is checking it
-                for (int i = 0; i < spaces.size(); i++) {//If we are hovering over the checking target, we have to check if we can even move to that location
-                    if (spaces[i][0] == posY && spaces[i][1] == posX) {
-                        check = false; //We've moved out of the way
-                        cout << "===================================== NO CHECK =====================================" << endl;
-                        checkX = 10;
-                        checkY = 10;
-                        return true;
-                    }
+    vector<vector<int>> getCollectionSpaces(int color) {
+        vector<vector<int>> temp;
+        vector<vector<int>> p;
+        vector<vector<int>> q;
+        for (int i = 0; i < holder.size(); i++) {
+            if (holder[i].getColor() == color || holder[i].getColor() < 0) {//Dont check the spaces of your own color
+                continue;
+            }
+
+            
+            if (holder[i].getPawn()) {
+                q = holder[i].getSpecialSpaces();//Special spaces are the spaces that are diagonal to pawns (so we don't get their avail spaces)
+                for (int j = 0; j < q.size(); j++) {
+                    temp.push_back(q[j]);
                 }
             }
+            else {
+                p = holder[i].getAvailSpaces();//For every other piece, get the collection of the spaces you are looking at
+                for (int j = 0; j < p.size(); j++) {
+                    temp.push_back(p[j]);
+                }
+            }
+            
+        }
+        return temp;
+    }
+
+    bool checkValidMove(vector<vector<int>> spaces, int posX, int posY, chessPieces temp) {
+        int tempPosX = temp.getPositionX();
+        int tempPosY = temp.getPositionY();
+        int color = temp.getColor();
+        int save = 0;
+
+        bool legalSpot = false;
+
+        for (int i = 0; i < spaces.size(); i++) {
+            //cout << "checking X: " << posX << " , and y: " << posY << ", with (" << spaces[i][1] << ", " << spaces[i][0] << ")" << endl;
+            if (spaces[i][0] == posY && spaces[i][1] == posX) {
+                legalSpot = true;
+            }
+        }
+
+        vector<vector<int>> temp2 = temp.getSpecialSpaces(); //Check if its a castle
+        if (color < 0 && temp2.size() != 0) {
+            for (int i = 0; i < temp2.size(); i++) {
+                if (temp2[i][0] == posY && temp2[i][1] == posX) {
+                    //Manually move the rook
+                    if (posX > 4) {
+                        for (int j = 0; j < holder.size(); j++) {
+                            if (holder[j].getPositionX() == 7 && holder[j].getPositionY() == tempPosY) {
+                                holder[j].setNewPositionCastle(posX - 1, posY, 7, posY);
+                                holder[j].setPosition((posX-1)* 75, posY * 75);
+                                holder[j].firstMoveMade();
+                            }
+                        }
+                    }
+                    else {
+                        for (int j = 0; j < holder.size(); j++) {
+                            if (holder[j].getPositionX() == 0 && holder[j].getPositionY() == tempPosY) {
+                                holder[j].setNewPositionCastle(posX + 2, posY, 0, posY);
+                                holder[j].setPosition((posX + 2) * 75, posY * 75);
+                                holder[j].firstMoveMade();
+                            }
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
+        else if (check) {
 
             if (colorP == 1) {//Get the path towards the king to check if its blockable
                 findPathKing(bKingPosX, bKingPosY);
@@ -1122,12 +1258,50 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
             else {
                 findPathKing(wKingPosX, wKingPosY);
             }
+            bool onPath = false;
+
+            for (int j = 0; j < path.size(); j++) {
+                if (posY == path[j][0] && posX == path[j][1]) {
+                    onPath = true;
+                }
+            }
+
+            //cout << "posX: " << posX << " , posY: " << posY << " , checkX: " << checkX << " , checkY: " << checkY << endl;
+            if (color < 0 && color != colorP * -1) {//We are holding the king opposite color of the piece that is checking it
+                if (onPath) { //ALSO CHECK if once off path, if it is still in check
+                    cout << "on path" << endl;
+                    return false;
+                }
+
+                if (legalSpot){
+                    //If we are hovering over the checking target, we have to check if we can even move to that location
+                    //cout << spaces[i][0] << " , " << spaces[i][1] << " , " << path[j][0] << " , " << path[j][1] << "." << endl;
+                    //Reminder: Just go through the path's vector and check if its in it, if it is in it, then its invalid
+                    cout << color * -1 << " dfadskfadsk" << endl;
+                    vector<vector<int>> p = getCollectionSpaces(color * -1); //Check this function. TO DO. I think the color is wrong
+                    for (int i = 0; i < p.size(); i++) {
+                        cout << "checking X: " << posX << " , and y: " << posY << ", with (" << p[i][1] << ", " << p[i][0] << ")" << endl; 
+                        if (p[i][0] == posY && p[i][1] == posX) {
+                            cout << "You'll end up getting checked again" << endl;
+                            return false;
+                        }
+                    }
+                            
+                         check = 0; //We've moved out of the way
+                         cout << "===================================== NO CHECK =====================================12345" << endl;
+                         checkX = 10;
+                         checkY = 10;
+                         return true;    
+                }
+            }
+
+            
 
             for (int i = 0; i < path.size(); i++) {
                 cout << "checking: (" << posX << " with " << path[i][1] << ") and (" << posY << " with " << path[i][0] << ")" << endl;
-                if (posX == path[i][1] && posY == path[i][0]) {//If the spot we are going to is in between the checking target and the king, then we say it is valid spot
+                if (posX == path[i][1] && posY == path[i][0] && legalSpot) {//If the spot we are going to is in between the checking target and the king, then we say it is valid spot
                     cout << "blockable!" << endl;
-                    check = false;
+                    check = 0;
                     cout << "===================================== NO CHECK =====================================" << endl;
                     checkX = 10;
                     checkY = 10;
@@ -1136,13 +1310,13 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
                     return true;
                 }
             }
-            if (posX != checkX || posY != checkY) {//If we are in check but we are not "killing" the checking target, return false
+            if (posX != checkX || posY != checkY || check > 1) {//If we are in check but we are not "killing" the checking target, return false
                 return false;
             }
             for (int i = 0; i < spaces.size(); i++) {//If we are hovering over the checking target, we have to check if we can even move to that location
                 if (spaces[i][0] == posY && spaces[i][1] == posX) {
                     //cout << "HAS TO BE X: " << posX << " , and y: " << posY << ", with (" << spaces[i][1] << ", " << spaces[i][0] << ")" << endl;
-                    check = false; //We've killed the checking piece
+                    check = 0; //We've killed the checking piece
                     cout << "===================================== NO CHECK =====================================" << endl;
                     checkX = 10;
                     checkY = 10;
@@ -1153,13 +1327,28 @@ void buildBoard(sf::Texture& textureBoard, sf::Texture& texturePiece, vector<sf:
             path.clear();
             return false;
         }
-        else {
-            for (int i = 0; i < spaces.size(); i++) {
-                cout << "checking X: " << posX << " , and y: " << posY << ", with (" << spaces[i][1] << ", " << spaces[i][0] << ")" << endl;
-                if (spaces[i][0] == posY && spaces[i][1] == posX) {
-                    return true;
+        else if(legalSpot) {
+            board[tempPosY][tempPosX] = 0;
+            save = board[posY][posX]; //Saves the old spot, turns the "predicted" spot into the new color
+            board[posY][posX] = color;
+            for (int i = 0; i < holder.size(); i++) { //Pinning. Will return false if the piece we are moving causes a check
+                if (holder[i].getPositionX() == tempPosX && holder[i].getPositionY() == tempPosY) {
+                    continue;
+                }
+                holder[i].movement();
+                
+                if (check && color == checkColor) {
+                    board[tempPosY][tempPosX] = color;
+                    check = 0;
+                    cout << "Pinned!" << endl;
+                    return false;
                 }
             }
+            board[tempPosY][tempPosX] = color;//Return everything to the way it was
+            board[posY][posX] = save;
+
+            return legalSpot;
+            
         }
         return false;
     }
@@ -1215,7 +1404,7 @@ int main()
 
             
             for (int i = 0; i < holder.size(); i++) {
-                if (!holder[i].checkAlive() || holder[i].getColor() == (turn % 2) + 1) {
+                if (!holder[i].checkAlive() || holder[i].getColor() == (turn % 2) + 1 || holder[i].getColor() == ((turn % 2) + 1) * -1) {
                     continue;
                 }
                 if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
