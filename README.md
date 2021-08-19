@@ -1,4 +1,6 @@
 # solo-chess
+
+## Project Description
 My attempt at replicating solo playable chess using c++.
 
 Best used in visual studios, as the SFML library is super sensitive.
@@ -8,7 +10,15 @@ Here is an example video showing it off:
 
 [Ruy Lopez Example](https://www.youtube.com/watch?v=r0uIpLdgwQ8)
 
+## Requirements
 
+- SFML Library
+
+## To use
+
+Simply just run the source.cpp file in visual studios to play the game
+
+## Misc
 Why did I write everything into one file (Source.cpp)? For some reason the SFML library only works in visual studios, and I'm not really familiar with it. Adding different files and using more conventional forms of coding (like branching) in visual studios is something that'd take me a while to learn. But it's less frustrating to deal with the janky library all in one file. If I could split it up, I would.
 
 Why did I do this? I was going on vacation and wanted to practice my openings on the car ride there. We couldnt bring a real chess board, so I just decided to make my own. I also did it just to prove to myself that I could.
