@@ -8,13 +8,13 @@ The best video I found for the installation of SFML is [here](https://www.youtub
 
 ## Demos
 
-![Alt Text](Chess/demo1.gif)
+![Alt Text](chess_demo/demo1.gif)
 
-![Alt Text](Chess/demo2.gif)
+![Alt Text](chess_demo/demo2.gif)
 
-![Alt Text](Chess/demo3.gif)
+![Alt Text](chess_demo/demo3.gif)
 
-![Alt Text](Chess/demo4.gif)
+![Alt Text](chess_demo/demo4.gif)
 
 ## Requirements
 
