@@ -6,9 +6,15 @@ My attempt at replicating solo playable chess using c++.
 Best used in visual studios, as the SFML library is super sensitive.
 The best video I found for the installation of SFML is [here](https://www.youtube.com/watch?v=neIoDQ71yb0).
 
-Here is an example video showing it off:
+## Demos
 
-[Ruy Lopez Example](https://www.youtube.com/watch?v=r0uIpLdgwQ8)
+![Alt Text](Chess/demo1.gif)
+
+![Alt Text](Chess/demo2.gif)
+
+![Alt Text](Chess/demo3.gif)
+
+![Alt Text](Chess/demo4.gif)
 
 ## Requirements
 
